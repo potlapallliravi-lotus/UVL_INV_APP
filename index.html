@@ -54,6 +54,7 @@ main{max-width:1100px;margin:0 auto;padding:16px}
 .pb{padding:18px 20px 22px}
 .sw{position:relative;margin-bottom:16px}
 .sw input{padding-right:44px}
+input[type=search]::-webkit-search-cancel-button,input[type=search]::-webkit-search-decoration{-webkit-appearance:none;display:none}
 .clear{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--blue);font-size:20px;font-weight:800;padding:6px 10px}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:-4px 0 14px}
 .chip{border:1px solid var(--line);background:var(--surface2);border-radius:999px;padding:5px 12px;font-size:13px}
@@ -77,6 +78,16 @@ main{max-width:1100px;margin:0 auto;padding:16px}
 .chk{display:flex;align-items:center;gap:9px;font-weight:500;font-size:16px}
 .chk input{width:22px;height:22px;accent-color:var(--blue)}
 .msg{margin-top:14px;padding:11px 14px;border-radius:10px;background:var(--good-bg);color:var(--good);font-weight:600}
+.recwrap{margin-top:24px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.rechead{padding:10px 14px;background:var(--surface2);border-bottom:1px solid var(--line);font-weight:700}
+.tw{overflow-x:auto}
+.rtbl{border-collapse:collapse;width:100%;min-width:1180px}
+.rtbl th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink2);text-align:left;padding:11px 12px;background:var(--surface2);border-bottom:1px solid var(--line);white-space:nowrap}
+.rtbl td{padding:12px;font-size:15px;vertical-align:middle}
+.rtbl td.num{font-variant-numeric:tabular-nums;text-align:right} .rtbl th.num{text-align:right}
+.rtbl td.nm{font-weight:600;min-width:200px}
+.thumb{width:48px;height:48px;border-radius:8px;border:1px solid var(--line);background:var(--surface2);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px}
+.thumb img{width:100%;height:100%;object-fit:cover}
 @media(max-width:700px){.adj{grid-template-columns:1fr}.plan input[type=number]{width:100%}}
 @media (display-mode: window-controls-overlay){
   header{padding-left:max(16px,env(titlebar-area-x,0px));min-height:env(titlebar-area-height,44px);app-region:drag;-webkit-app-region:drag}
@@ -129,6 +140,11 @@ main{max-width:1100px;margin:0 auto;padding:16px}
           </div>
           <div class="err" id="err" role="alert"></div>
           <div class="msg hidden" id="ok"></div>
+          <div class="recwrap"><div class="rechead">Inventory record</div><div class="tw"><table class="rtbl"><thead><tr>
+            <th>No</th><th>ID</th><th>Item name</th><th>Photo</th><th>Category</th><th>Subcategory</th><th>Location</th><th>Unit / pack</th>
+            <th class="num">Stock in</th><th class="num">Stock out</th><th class="num">Available</th><th class="num">Min level</th><th>Status</th>
+            <th class="num">Required next week</th><th>Needed immediately</th><th>Last updated</th><th>Updated by</th></tr></thead>
+            <tbody id="rrow"></tbody></table></div></div>
         </div>
       </div>
     </section>
@@ -154,6 +170,7 @@ function call(req){
     .then(r=>r.json().catch(()=>{ throw new Error('Unexpected server response. Check the server link and that access is set to Anyone.'); }))
     .then(o=>{ if(o.ok) return o.data; if(o.error==='SESSION') forceLogin(o.message); throw new Error(o.message||'Something went wrong'); });
 }
+let tT; function toast(m){ const t=$('#toast'); t.textContent=m; t.style.opacity=1; clearTimeout(tT); tT=setTimeout(()=>t.style.opacity=0,5000); }
 const store={ sget(k){try{return localStorage.getItem(k)}catch(e){return null}}, sset(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}, lget(k){try{return localStorage.getItem(k)}catch(e){return null}}, lset(k,v){try{localStorage.setItem(k,v)}catch(e){}} };
 
 /* ---------- login ---------- */
@@ -199,7 +216,23 @@ function show(it){
   $('#req').value=it.required==null?'':it.required; $('#urg').checked=!!it.urgent;
   $('#add').value=''; $('#rem').value='';
 }
+const IMG={};
+function renderRecord(){
+  const it=S.sel, t=it.updated?new Date(it.updated):null, n=S.items.indexOf(it)+1;
+  const when=t&&!isNaN(t)?t.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})+' '+t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'–';
+  $('#rrow').innerHTML=`<tr><td>${n}</td><td>${esc(it.id)}</td><td class="nm">${esc(it.name)}</td>
+    <td><div class="thumb" id="rph">${it.hasImage?'…':'No photo'}</div></td>
+    <td>${esc(it.category)}</td><td>${esc(it.subcategory||'–')}</td><td>${esc(it.location||'–')}</td><td>${esc(it.unit||'–')}</td>
+    <td class="num">${fmt(it.stockIn)}</td><td class="num">${fmt(it.stockOut)}</td><td class="num"><b>${fmt(it.available)}</b></td><td class="num">${fmt(it.min||0)}</td>
+    <td>${pill(it.status)}</td><td class="num">${it.required==null?'–':fmt(it.required)}</td><td>${it.urgent?'<b style="color:var(--bad)">Yes</b>':'No'}</td><td>${esc(when)}</td><td>${esc(it.by||'–')}</td></tr>`;
+  if(it.hasImage){
+    const put=u=>{ if(S.sel===it&&$('#rph')&&u) $('#rph').innerHTML=`<img src="${u}" alt="">`; };
+    if(IMG[it.id]) put(IMG[it.id]);
+    else call({action:'images',ids:[it.id]}).then(r=>{ if(r[it.id]){ IMG[it.id]=r[it.id]; put(r[it.id]); } else if(S.sel===it&&$('#rph')) $('#rph').textContent='No photo'; }).catch(()=>{ if($('#rph')) $('#rph').textContent='No photo'; });
+  }
+}
 function renderTiles(flash){
+  renderRecord();
   const it=S.sel, t=it.updated?new Date(it.updated):null;
   const tiles=[
     ['Item ID',esc(it.id)],['Item',esc(it.name)],['Category',esc(it.category)],['Subcategory',esc(it.subcategory||'–')],['Location',esc(it.location||'–')],
@@ -272,7 +305,15 @@ function demoApi(req){
 
 (async function start(){
   $('#srv').value=apiUrl(); if(apiUrl()) $('#srvRow').classList.add('hidden');
-  if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+  if('serviceWorker' in navigator){
+    const hadSW=!!navigator.serviceWorker.controller; let reloaded=false;
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(!hadSW||reloaded) return; reloaded=true; const busy=['#add','#rem','#req'].some(i=>$(i)&&$(i).value.trim()!==''); if(busy){ toast('New version ready - it will load next time you open the app.'); } else location.reload(); });
+    navigator.serviceWorker.register('sw.js').then(reg=>{
+      const chk=()=>reg.update().catch(()=>{});
+      document.addEventListener('visibilitychange',()=>{ if(!document.hidden) chk(); });
+      setInterval(chk,30*60*1000);
+    }).catch(()=>{});
+  }
   const t=store.sget('qTok');
   if(t&&!DEMO){ S.token=t; try{ await load(); showApp(); return; }catch(e){ S.token=null; store.sset('qTok',null); } }
   (apiUrl()?$('#un'):$('#srv')).focus();
