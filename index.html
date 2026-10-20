@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quick Stock Update</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#12355b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Stock">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+:root{
+  --bg:#f3f5f8; --surface:#fff; --surface2:#f8fafc; --ink:#0f1b2d; --ink2:#46546a; --muted:#6b7a90; --line:#e1e7ef;
+  --brand:#12355b; --blue:#2a78d6; --good:#1a7f4b; --warn:#a86a00; --bad:#c0392b;
+  --good-bg:#e4f4ec; --warn-bg:#fcf1d9; --bad-bg:#fbe7e4; --shadow:0 1px 2px rgba(15,27,45,.06),0 4px 14px rgba(15,27,45,.05); color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1520; --surface:#16202c; --surface2:#1b2735; --ink:#e8edf3; --ink2:#b9c3d0; --muted:#8e9db0; --line:#2a3746; --brand:#0b2440;
+    --blue:#3987e5; --good:#4cc08a; --warn:#e0a93f; --bad:#ee7a6d; --good-bg:#15382a; --warn-bg:#3d3114; --bad-bg:#42201c; --shadow:none; color-scheme:dark;
+  }
+}
+*{box-sizing:border-box} html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+button,input{font:inherit;color:inherit} button{cursor:pointer}
+.hidden{display:none!important}
+.lbl{display:block;font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em}
+input[type=text],input[type=password],input[type=number],input[type=search]{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:10px;background:var(--surface);outline:none;font-size:16px}
+input:focus{border-color:var(--blue);box-shadow:0 0 0 3px color-mix(in srgb,var(--blue) 25%,transparent)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:12px 18px;font-weight:700;white-space:nowrap}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn:hover{filter:brightness(1.06)} .btn:disabled{opacity:.6;cursor:default}
+.btn.big{width:100%;padding:14px;font-size:16px}
+.err{color:var(--bad);min-height:20px;font-size:13px;margin:6px 0 4px}
+
+#login{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;background:linear-gradient(160deg,#0b2440,#12355b 55%,#1c4f85)}
+.login-card{width:100%;max-width:380px;padding:30px 26px;border-radius:16px;background:var(--surface);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.login-card h1{margin:0 0 4px;font-size:21px} .login-card p{margin:0 0 18px;color:var(--ink2)}
+.login-card label{display:block;margin-bottom:14px}
+
+header{background:var(--brand);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px}
+header h1{margin:0;font-size:17px;flex:1}
+.badge{padding:3px 11px;border-radius:999px;font-size:12px;font-weight:700;background:rgba(255,255,255,.18)}
+header .btn{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25);color:#fff;padding:6px 12px;font-size:13px}
+main{max-width:1100px;margin:0 auto;padding:16px}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+.ph{display:flex;align-items:baseline;gap:12px;padding:16px 20px;border-bottom:1px solid var(--line)}
+.ph h2{margin:0;font-size:18px} .ph span{color:var(--muted)}
+.pb{padding:18px 20px 22px}
+.sw{position:relative;margin-bottom:16px}
+.sw input{padding-right:44px}
+.clear{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--blue);font-size:20px;font-weight:800;padding:6px 10px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:-4px 0 14px}
+.chip{border:1px solid var(--line);background:var(--surface2);border-radius:999px;padding:5px 12px;font-size:13px}
+.chip.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.hint{color:var(--muted);padding:6px 0 2px}
+
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px}
+.tile{background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-height:96px}
+.tile .k{font-size:12px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.03em}
+.tile .v{font-size:19px;font-weight:700;margin-top:4px;line-height:1.3}
+.tile.big .v{font-size:32px}
+.pill{display:inline-block;margin-top:4px;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:700}
+.pill.AVAILABLE{background:var(--good-bg);color:var(--good)} .pill.LOW{background:var(--warn-bg);color:var(--warn)} .pill.OUT{background:var(--bad-bg);color:var(--bad)}
+.flash{animation:fl 1.2s ease-out} @keyframes fl{from{box-shadow:0 0 0 3px color-mix(in srgb,var(--good) 55%,transparent)}to{box-shadow:0 0 0 3px transparent}}
+
+.adj{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.adj .r{display:flex;gap:10px}
+.plan{border-top:1px solid var(--line);margin-top:22px;padding-top:18px}
+.plan .r{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.plan input[type=number]{width:200px}
+.chk{display:flex;align-items:center;gap:9px;font-weight:500;font-size:16px}
+.chk input{width:22px;height:22px;accent-color:var(--blue)}
+.msg{margin-top:14px;padding:11px 14px;border-radius:10px;background:var(--good-bg);color:var(--good);font-weight:600}
+@media(max-width:700px){.adj{grid-template-columns:1fr}.plan input[type=number]{width:100%}}
+@media (display-mode: window-controls-overlay){
+  header{padding-left:max(16px,env(titlebar-area-x,0px));min-height:env(titlebar-area-height,44px);app-region:drag;-webkit-app-region:drag}
+  header .btn,header .badge{app-region:no-drag;-webkit-app-region:no-drag}
+}
+</style>
+</head>
+<body>
+
+<div id="login">
+  <form class="login-card" id="loginForm" autocomplete="off">
+    <img src="logo.png" alt="Ulavacharu Inv Dash" style="display:block;width:100%;max-width:260px;margin:0 auto 14px">
+    <h1 style="text-align:center">Quick Stock Update</h1>
+    <p style="text-align:center">Log in to continue.</p>
+    <label id="srvRow"><span class="lbl">Server link (Apps Script web app URL)</span><input type="text" id="srv" autocapitalize="none" placeholder="https://script.google.com/macros/s/.../exec"></label>
+    <label><span class="lbl">Username</span><input type="text" id="un" autocapitalize="none" autocomplete="username"></label>
+    <label><span class="lbl">Password</span><input type="password" id="pw" autocomplete="current-password"></label>
+    <div class="err" id="loginErr" role="alert"></div>
+    <button class="btn primary big" id="loginBtn" type="submit">Log in</button>
+  </form>
+</div>
+
+<div id="app" class="hidden">
+  <header><h1>Quick Stock Update</h1><span class="badge" id="who"></span><button class="btn" id="logoutBtn">Log out</button></header>
+  <div id="demoBanner" class="hidden" style="background:var(--warn-bg);color:var(--warn);padding:8px 16px;font-size:13px;font-weight:600">DEMO MODE — sample data. Demo login: demo / demo1234</div>
+  <main>
+    <section class="panel">
+      <div class="ph"><h2>Update stock</h2><span id="matches"></span></div>
+      <div class="pb">
+        <label class="lbl" for="q">Search item ID or name</label>
+        <div class="sw"><input type="search" id="q" autocomplete="off" placeholder="e.g. 40001 or trash bags"><button class="clear hidden" id="clr" aria-label="Clear search">✕</button></div>
+        <div class="chips hidden" id="chips"></div>
+        <div class="hint" id="hint">Type an item ID or name to start.</div>
+
+        <div id="rec" class="hidden">
+          <div class="tiles" id="tiles"></div>
+
+          <div class="adj">
+            <div><label class="lbl" for="add">Add stock (+ IN)</label>
+              <div class="r"><input type="number" id="add" min="0" step="1" inputmode="numeric" placeholder="quantity"><button class="btn primary" id="addBtn">Add ▶</button></div></div>
+            <div><label class="lbl" for="rem">Remove stock (− OUT)</label>
+              <div class="r"><input type="number" id="rem" min="0" step="1" inputmode="numeric" placeholder="quantity"><button class="btn" id="remBtn">Remove ▶</button></div></div>
+          </div>
+
+          <div class="plan">
+            <label class="lbl" for="req">Stock required next week (0 or greater)</label>
+            <div class="r"><input type="number" id="req" min="0" step="1" inputmode="numeric" placeholder="–">
+              <label class="chk"><input type="checkbox" id="urg">Needed immediately</label>
+              <button class="btn" id="planBtn">Save plan ▶</button></div>
+          </div>
+          <div class="err" id="err" role="alert"></div>
+          <div class="msg hidden" id="ok"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<div id="toast" style="position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--bad);color:#fff;padding:10px 16px;border-radius:10px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90vw;z-index:50"></div>
+
+<script>
+'use strict';
+const DEMO = false;
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => Number(n).toLocaleString();
+const S = { token:null, name:'', items:[], matches:[], sel:null };
+
+/* ---------- API (same Apps Script backend) ---------- */
+function apiUrl(){ return store.lget('qUrl')||''; }
+function call(req){
+  if (S.token && req.action!=='login') req.token=S.token;
+  const url=apiUrl(); if(!url) return Promise.reject(new Error('Enter the server link.'));
+  return fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(req),redirect:'follow'})
+    .catch(()=>{ throw new Error('Cannot reach the server. Check your connection and the server link.'); })
+    .then(r=>r.json().catch(()=>{ throw new Error('Unexpected server response. Check the server link and that access is set to Anyone.'); }))
+    .then(o=>{ if(o.ok) return o.data; if(o.error==='SESSION') forceLogin(o.message); throw new Error(o.message||'Something went wrong'); });
+}
+const store={ sget(k){try{return localStorage.getItem(k)}catch(e){return null}}, sset(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}, lget(k){try{return localStorage.getItem(k)}catch(e){return null}}, lset(k,v){try{localStorage.setItem(k,v)}catch(e){}} };
+
+/* ---------- login ---------- */
+$('#loginForm').addEventListener('submit',async ev=>{
+  ev.preventDefault(); const un=$('#un').value.trim(), pw=$('#pw').value, sv=$('#srv').value.trim(); if(!un||!pw) return;
+  if(sv){ if(!/^https:\/\/script\.google\.com\/.+\/exec/.test(sv)){ $('#loginErr').textContent='Server link must be the https://script.google.com/.../exec URL.'; return; } store.lset('qUrl',sv); }
+  $('#loginBtn').disabled=true; $('#loginErr').textContent='';
+  try{ const r=await call({action:'login',username:un,password:pw}); S.token=r.token; store.sset('qTok',r.token); $('#pw').value=''; await load(); showApp(); }
+  catch(e){ $('#loginErr').textContent=e.message; $('#pw').select(); }
+  $('#loginBtn').disabled=false;
+});
+function forceLogin(msg){ S.token=null; S.items=[]; store.sset('qTok',null); $('#app').classList.add('hidden'); $('#login').classList.remove('hidden'); $('#loginErr').textContent=msg||''; $('#pw').value=''; $('#srvRow').classList.toggle('hidden',!!apiUrl()); $('#un').focus(); }
+$('#logoutBtn').onclick=async()=>{ try{await call({action:'logout'})}catch(e){} forceLogin(''); };
+let idleT; const bump=()=>{ clearTimeout(idleT); if(S.token) idleT=setTimeout(()=>forceLogin('Logged out after 30 minutes of inactivity.'),30*60*1000); };
+['click','keydown','touchstart'].forEach(e=>document.addEventListener(e,bump,{passive:true}));
+async function load(){ const d=await call({action:'data'}); S.items=d.items; S.name=d.name||''; }
+function showApp(){ $('#login').classList.add('hidden'); $('#app').classList.remove('hidden'); $('#demoBanner').classList.toggle('hidden',!DEMO); $('#who').textContent=S.name; clearAll(); bump();
+  try{ const sq=new URLSearchParams(location.search).get('q'); if(sq){ $('#q').value=sq.trim().slice(0,80); onSearch(); history.replaceState(null,'',location.pathname); } }catch(e){} }
+
+/* ---------- search ---------- */
+function find(q){
+  q=q.trim().toLowerCase(); if(!q) return [];
+  const ex=S.items.filter(i=>String(i.id).toLowerCase()===q); if(ex.length) return ex;
+  const t=q.split(/\s+/);
+  return S.items.filter(i=>{ const h=(i.name+' '+i.id).toLowerCase(); return t.every(x=>h.includes(x)); })
+    .sort((a,b)=>(a.name.toLowerCase().startsWith(q)?0:1)-(b.name.toLowerCase().startsWith(q)?0:1)||a.name.localeCompare(b.name)).slice(0,8);
+}
+function pill(st){ return st==='AVAILABLE'?'<span class="pill AVAILABLE">✓ AVAILABLE</span>':st==='LOW STOCK'?'<span class="pill LOW">▲ LOW STOCK</span>':'<span class="pill OUT">✕ OUT OF STOCK</span>'; }
+
+function onSearch(){
+  const q=$('#q').value; $('#clr').classList.toggle('hidden',!q);
+  S.matches=find(q); msg(''); err('');
+  $('#matches').textContent=q.trim()?'Matches found: '+S.matches.length:'';
+  if(!S.matches.length){ S.sel=null; $('#rec').classList.add('hidden'); $('#chips').classList.add('hidden'); $('#hint').classList.remove('hidden'); $('#hint').textContent=q.trim()?'No matching item.':'Type an item ID or name to start.'; return; }
+  show(S.matches[0]);
+}
+function show(it){
+  S.sel=it; $('#hint').classList.add('hidden'); $('#rec').classList.remove('hidden');
+  const ch=$('#chips');
+  if(S.matches.length>1){ ch.classList.remove('hidden'); ch.innerHTML=S.matches.map(m=>`<button class="chip ${m.id===it.id?'on':''}" data-id="${esc(m.id)}">${esc(m.name)}</button>`).join(''); ch.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{ msg(''); err(''); show(S.items.find(x=>x.id===b.dataset.id)); }); }
+  else ch.classList.add('hidden');
+  renderTiles(false);
+  $('#req').value=it.required==null?'':it.required; $('#urg').checked=!!it.urgent;
+  $('#add').value=''; $('#rem').value='';
+}
+function renderTiles(flash){
+  const it=S.sel, t=it.updated?new Date(it.updated):null;
+  const tiles=[
+    ['Item ID',esc(it.id)],['Item',esc(it.name)],['Category',esc(it.category)],['Subcategory',esc(it.subcategory||'–')],['Location',esc(it.location||'–')],
+    ['Stock left (available)',fmt(it.available),'big'],['Status',pill(it.status)],
+    ['Total in / out',fmt(it.stockIn)+' / '+fmt(it.stockOut)],
+    ['Updated by',esc(it.by||'–')],
+    ['Updated at',t&&!isNaN(t)?esc(t.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' '+t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})):'–']
+  ];
+  $('#tiles').innerHTML=tiles.map(x=>`<div class="tile ${x[2]||''}"><div class="k">${x[0]}</div><div class="v">${x[1]}</div></div>`).join('');
+  if(flash){ $('#tiles').classList.remove('flash'); void $('#tiles').offsetWidth; $('#tiles').classList.add('flash'); }
+}
+function clearAll(){ $('#q').value=''; onSearch(); $('#q').focus(); }
+$('#q').addEventListener('input',onSearch);
+$('#clr').onclick=clearAll;
+
+/* ---------- add / remove / save plan ---------- */
+const msg=m=>{ const e=$('#ok'); e.textContent=m; e.classList.toggle('hidden',!m); };
+const err=m=>{ $('#err').textContent=m||''; };
+function num(id){ const v=$(id).value.trim(); return v===''?0:Number(v); }
+
+async function adjust(kind){
+  const it=S.sel; if(!it) return; err(''); msg('');
+  const n=num(kind==='add'?'#add':'#rem');
+  if(!Number.isInteger(n)||n<0){ err('Enter a whole number, 0 or more.'); return; }
+  if(!n){ err('Enter a quantity to '+(kind==='add'?'add':'remove')+'.'); return; }
+  if(kind==='rem'&&n>it.available){ err(`Cannot remove ${n} — only ${it.available} in stock.`); return; }
+  const btns=['#addBtn','#remBtn']; btns.forEach(b=>$(b).disabled=true);
+  try{
+    const before=it.available, r=await call({action:'adjust',id:it.id,add:kind==='add'?n:0,remove:kind==='rem'?n:0});
+    Object.assign(it,{stockIn:r.stockIn,stockOut:r.stockOut,available:r.available,status:r.status,by:S.name,updated:new Date().toISOString()});
+    renderTiles(true); $('#add').value=''; $('#rem').value='';
+    msg(`${kind==='add'?'Added +':'Removed −'}${fmt(n)} · stock ${fmt(before)} → ${fmt(it.available)}`);
+  }catch(e){ err(e.message); }
+  btns.forEach(b=>$(b).disabled=false);
+}
+$('#addBtn').onclick=()=>adjust('add'); $('#remBtn').onclick=()=>adjust('rem');
+$('#add').addEventListener('keydown',e=>{ if(e.key==='Enter') adjust('add'); });
+$('#rem').addEventListener('keydown',e=>{ if(e.key==='Enter') adjust('rem'); });
+
+$('#planBtn').onclick=async()=>{
+  const it=S.sel; if(!it) return; err(''); msg('');
+  const raw=$('#req').value.trim(), req=raw===''?null:Number(raw);
+  if(req!==null&&(!Number.isInteger(req)||req<0)){ err('Required next week must be a whole number, 0 or more.'); return; }
+  $('#planBtn').disabled=true;
+  try{
+    await call({action:'update',id:it.id,fields:{required:req,urgent:$('#urg').checked}});
+    Object.assign(it,{required:req,urgent:$('#urg').checked,by:S.name,updated:new Date().toISOString()});
+    renderTiles(true); msg('Plan saved'+(req===null?'':' · required next week: '+fmt(req))+($('#urg').checked?' · needed immediately':''));
+  }catch(e){ err(e.message); }
+  $('#planBtn').disabled=false;
+};
+
+/* ---------- DEMO backend (only outside Apps Script) ---------- */
+let DB=null;
+function demoApi(req){
+  const ok=d=>JSON.stringify({ok:true,data:d}), bad=(m,c)=>JSON.stringify({ok:false,error:c||'ERROR',message:m});
+  const st=i=>{ i.available=i.stockIn-i.stockOut; i.status=i.available<=0?'OUT OF STOCK':i.available<=i.min?'LOW STOCK':'AVAILABLE'; };
+  if(!DB){ DB={tok:{},items:[['40001','Trash Bags (55-60 Gal)','Cleaning','Cleaning Supplies',0,5],['40002','Trash Bags (33 Gal)','Cleaning','Cleaning Supplies',9,10],['50001','Frozen Tilapia Fillets - 10 lb','RD','Seafood',22,8],['70041','Besan','OM','Dals & Pulses',31,10],['80058','DESI GHEE','Indian Groceries','Dairy & Ghee',6,6]]
+    .map(r=>({id:r[0],name:r[1],category:r[2],subcategory:r[3],location:r[2],stockIn:r[4],stockOut:0,min:r[5],required:null,urgent:false,by:'',updated:''}))}; DB.items.forEach(st); }
+  if(req.action==='login'){ if(req.username==='demo'&&req.password==='demo1234'){ const t='d'+Math.random(); DB.tok[t]='demo'; return ok({token:t,role:'staff',name:'demo'}); } return bad('Wrong username or password.'); }
+  if(!DB.tok[req.token]) return bad('Session expired - please log in again.','SESSION');
+  if(req.action==='logout'){ delete DB.tok[req.token]; return ok({}); }
+  if(req.action==='data') return ok({role:'staff',name:'demo',items:JSON.parse(JSON.stringify(DB.items))});
+  const i=DB.items.find(x=>x.id===req.id);
+  if(req.action==='adjust'){ if(req.remove>i.stockIn+req.add-i.stockOut) return bad('Cannot remove '+req.remove+' - only '+(i.stockIn+req.add-i.stockOut)+' in stock.');
+    i.stockIn+=req.add; i.stockOut+=req.remove; st(i); return ok({id:i.id,stockIn:i.stockIn,stockOut:i.stockOut,available:i.available,status:i.status}); }
+  if(req.action==='update'){ i.required=req.fields.required; i.urgent=req.fields.urgent; return ok({id:i.id}); }
+  return bad('Unknown action');
+}
+
+(async function start(){
+  $('#srv').value=apiUrl(); if(apiUrl()) $('#srvRow').classList.add('hidden');
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+  const t=store.sget('qTok');
+  if(t&&!DEMO){ S.token=t; try{ await load(); showApp(); return; }catch(e){ S.token=null; store.sset('qTok',null); } }
+  (apiUrl()?$('#un'):$('#srv')).focus();
+})();
+</script>
+</body>
+</html>
